@@ -21,6 +21,16 @@ public class AppointmentsController : ControllerBase
         var appointments = await _appointmentRepository.GetAllAsync();
         return Ok(appointments);
     }
+    [HttpGet("doctor/{doctorId}")]
+    public async Task<ActionResult<IEnumerable<Appointment>>> GetAppointmentsByDoctor(int doctorId, [FromQuery] DateTime? date)
+    {
+        // Default to today if no date is provided
+        var targetDate = date ?? DateTime.Today;
+
+        var appointments = await _appointmentRepository.GetByDoctorAndDateAsync(doctorId, targetDate);
+
+        return Ok(appointments);
+    }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<Appointment>> GetAppointment(int id)

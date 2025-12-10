@@ -3,11 +3,12 @@ using HealthCare.Database;
 using HealthCare.Services;
 using HealthCareManagementSystem.Models;
 using HealthCareManagementSystem.Repository;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace HealthCareManagementSystem
 {
@@ -24,7 +25,23 @@ namespace HealthCareManagementSystem
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            builder.Services.AddControllers().AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+                options.JsonSerializerOptions.WriteIndented = true;
+            });
 
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAngularApp",
+                    policy =>
+                    {
+                        policy.WithOrigins("http://localhost:4200")
+                              .AllowAnyHeader()
+                              .AllowAnyMethod()
+                              .AllowCredentials();
+                    });
+            });
             //admin
             var jwtSettings = builder.Configuration.GetSection("Jwt");
             var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
@@ -89,6 +106,8 @@ namespace HealthCareManagementSystem
             builder.Services.AddScoped<IMedicineRepository, MedicineRepository>();
             builder.Services.AddScoped<IPrescriptionRepository, PrescriptionRepository>();
             builder.Services.AddScoped<IBillingPharmacyRepository, BillingPharmacyRepository>();
+            //doctor
+            builder.Services.AddScoped<IConsultationRepository, ConsultationRepository>();
 
             builder.Services.AddScoped<HealthCareManagementSystem.Helper.JwtTokenHelper>();
             builder.Services.AddScoped<PdfService>();
@@ -102,7 +121,7 @@ namespace HealthCareManagementSystem
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-
+            app.UseCors("AllowAngularApp");
             app.UseHttpsRedirection();
             app.UseAuthentication();
             app.UseAuthorization();

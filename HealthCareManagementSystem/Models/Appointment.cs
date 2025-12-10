@@ -69,7 +69,6 @@ namespace HealthCareManagementSystem.Models
         public string Status => IsVisited ? "Visited" : "Pending";
 
         [ForeignKey("PatientId")]
-        [JsonIgnore]
         public virtual Patient? Patient { get; set; }
     }
 }

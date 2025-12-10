@@ -8,9 +8,9 @@ namespace HealthCareManagementSystem.Models
         [Key]
         public int DoctorId { get; set; }
 
-        [ForeignKey("User")]
-        public int UserId { get; set; }
-        public User? User { get; set; }
+        [ForeignKey("ApplicationUser")]
+        public string UserId { get; set; } // Identity uses String IDs by default
+        public ApplicationUser? User { get; set; }
 
         [ForeignKey("Specialization")]
         public int SpecializationId { get; set; }
@@ -61,7 +61,9 @@ namespace HealthCareManagementSystem.Models
     {
         [Key]
         public int PharmacyBillId { get; set; }
-        
+        public int? PatientId { get; set; }
+        [ForeignKey("PatientId")]
+        public Patient? Patient { get; set; }
         public DateTime BillDate { get; set; } = DateTime.UtcNow;
         
         [Column(TypeName = "decimal(10,2)")]

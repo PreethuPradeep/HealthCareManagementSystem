@@ -1,4 +1,5 @@
-﻿using HealthCareManagementSystem.Repository;
+﻿using HealthCare.Services;
+using HealthCareManagementSystem.Repository;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HealthCareManagementSystem.Controllers
@@ -8,14 +9,14 @@ namespace HealthCareManagementSystem.Controllers
     public class PrescriptionsController : ControllerBase
     {
         private readonly IPrescriptionRepository _repo;
+        private readonly PdfService _pdfService;
 
-        public PrescriptionsController(IPrescriptionRepository repo)
+        public PrescriptionsController(IPrescriptionRepository repo,PdfService _pdfService)
         {
             _repo = repo;
+            _pdfService = _pdfService;
         }
 
-        // ✅ 1. Search Prescriptions (by keyword)
-        // keyword can be Patient Name / MMR / AppointmentId (as your repo supports)
         [HttpGet("search")]
         public async Task<IActionResult> Search([FromQuery] string keyword)
         {
@@ -26,7 +27,7 @@ namespace HealthCareManagementSystem.Controllers
             return Ok(result);
         }
 
-        // ✅ 2. Get Prescription Basic Info
+
         [HttpGet("{prescriptionId}")]
         public async Task<IActionResult> GetPrescription(int prescriptionId)
         {
@@ -37,7 +38,7 @@ namespace HealthCareManagementSystem.Controllers
             return Ok(prescription);
         }
 
-        // ✅ 3. Get Prescription Medicines
+
         [HttpGet("{prescriptionId}/items")]
         public async Task<IActionResult> GetPrescriptionItems(int prescriptionId)
         {
@@ -45,12 +46,25 @@ namespace HealthCareManagementSystem.Controllers
             return Ok(items);
         }
 
-        // ✅ 4. Get Dosage Details
         [HttpGet("{prescriptionId}/dosage")]
         public async Task<IActionResult> GetDosageDetails(int prescriptionId)
         {
             var dosage = await _repo.GetDosageDetailsAsync(prescriptionId);
             return Ok(dosage);
+        }
+
+        [HttpGet("{prescriptionId}/download")]
+        public async Task<IActionResult> DownloadPrescription(int prescriptionId)
+        {
+            var prescription = await _repo.GetPrescriptionAsync(prescriptionId);
+            if (prescription == null) return NotFound("Prescription not found");
+
+            var items = await _repo.GetPrescriptionItemsAsync(prescriptionId);
+
+            // You need to inject PdfService into this controller constructor first!
+            var pdfBytes = _pdfService.GeneratePrescriptionPdf(prescription, items);
+
+            return File(pdfBytes, "application/pdf", $"Prescription_{prescriptionId}.pdf");
         }
     }
 }

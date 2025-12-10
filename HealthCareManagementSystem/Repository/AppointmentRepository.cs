@@ -21,7 +21,15 @@ namespace HealthCareManagementSystem.Repository
                 .ThenBy(a => a.TokenNo)
                 .ToListAsync();
         }
-
+        public async Task<IEnumerable<Appointment>> GetByDoctorAndDateAsync(int doctorId, DateTime date)
+        {
+            return await _context.Appointments
+                .AsNoTracking()
+                .Include(a => a.Patient)
+                .Where(a => a.DoctorId == doctorId && a.AppointmentDate.Date == date.Date)
+                .OrderBy(a => a.TokenNo)
+                .ToListAsync();
+        }
         public async Task<Appointment?> GetByIdAsync(int id)
         {
             return await _context.Appointments.FindAsync(id);

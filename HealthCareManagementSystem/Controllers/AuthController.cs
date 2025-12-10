@@ -45,7 +45,25 @@ namespace HealthCareManagementSystem.Controllers
 
             if (!result.Succeeded)
                 return Unauthorized(new { message = "Invalid email or password" });
+            int specificId = 0;
+            string roleName = user.Role?.RoleName ?? "";
 
+            using (var scope = HttpContext.RequestServices.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<HealthCare.Database.HealthCareDbContext>();
+
+                if (roleName == "Doctor")
+                {
+                    var doctor = await db.Doctors.FirstOrDefaultAsync(d => d.UserId == user.Id);
+                    specificId = doctor?.DoctorId ?? 0;
+                }
+                else if (roleName == "Patient")
+                {
+                    var patient = await db.Patients.FirstOrDefaultAsync(p => p.Email == user.Email);
+                    specificId = patient?.PatientId ?? 0;
+                }
+                // Add logic for Pharmacist/Receptionist if they have specific tables
+            }
             var token = _jwt.GenerateToken(user);
 
             return Ok(new
