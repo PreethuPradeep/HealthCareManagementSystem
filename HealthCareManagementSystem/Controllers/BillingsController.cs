@@ -1,90 +1,80 @@
 using HealthCareManagementSystem.Models;
 using HealthCareManagementSystem.Repository;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace HealthCareManagementSystem.Controllers;
-
-[ApiController]
-[Route("api/[controller]")]
-public class BillingsController : ControllerBase
+namespace HealthCareManagementSystem.Controllers
 {
-    private readonly IBillingRepository _billingRepository;
-
-    public BillingsController(IBillingRepository billingRepository)
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize(Roles = "Admin,Receptionist")]
+    public class BillingsController : ControllerBase
     {
-        _billingRepository = billingRepository;
-    }
+        private readonly IBillingRepository _billingRepository;
 
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<Billing>>> GetBillings()
-    {
-        var billings = await _billingRepository.GetAllAsync();
-        return Ok(billings);
-    }
-
-    [HttpGet("{id}")]
-    public async Task<ActionResult<Billing>> GetBilling(int id)
-    {
-        var billing = await _billingRepository.GetByIdAsync(id);
-
-        if (billing == null)
+        public BillingsController(IBillingRepository billingRepository)
         {
-            return NotFound($"Billing with ID {id} not found.");
+            _billingRepository = billingRepository;
         }
 
-        return Ok(billing);
-    }
-
-    [HttpGet("patient/{patientId}")]
-    public async Task<ActionResult<IEnumerable<Billing>>> GetBillingsByPatient(int patientId)
-    {
-        var billings = await _billingRepository.GetByPatientAsync(patientId);
-        return Ok(billings);
-    }
-
-    [HttpPost]
-    public async Task<ActionResult<Billing>> CreateBilling(Billing billing)
-    {
-        if (!ModelState.IsValid)
+        [HttpGet]
+        public async Task<IActionResult> GetBillings()
         {
-            return BadRequest(ModelState);
+            var billings = await _billingRepository.GetAllAsync();
+            return Ok(billings);
         }
 
-        var createdBilling = await _billingRepository.AddAsync(billing);
-        return CreatedAtAction(nameof(GetBilling), new { id = createdBilling.BillingId }, createdBilling);
-    }
-
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateBilling(int id, Billing billing)
-    {
-        if (id != billing.BillingId)
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetBilling(int id)
         {
-            return BadRequest("Billing ID mismatch.");
+            var billing = await _billingRepository.GetByIdAsync(id);
+            if (billing == null)
+                return NotFound($"Billing with ID {id} not found.");
+
+            return Ok(billing);
         }
 
-        if (!ModelState.IsValid)
+        [HttpGet("patient/{patientId}")]
+        public async Task<IActionResult> GetBillingsByPatient(int patientId)
         {
-            return BadRequest(ModelState);
+            var billings = await _billingRepository.GetByPatientAsync(patientId);
+            return Ok(billings);
         }
 
-        var updated = await _billingRepository.UpdateAsync(id, billing);
-        if (updated == null)
+        [HttpPost]
+        public async Task<IActionResult> CreateBilling(Billing billing)
         {
-            return NotFound($"Billing with ID {id} not found.");
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var created = await _billingRepository.AddAsync(billing);
+            return Ok(created);
         }
 
-        return NoContent();
-    }
-
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteBilling(int id)
-    {
-        var deleted = await _billingRepository.DeleteAsync(id);
-        if (!deleted)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateBilling(int id, Billing billing)
         {
-            return NotFound($"Billing with ID {id} not found.");
+            if (id != billing.BillingId)
+                return BadRequest("Billing ID mismatch.");
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var updated = await _billingRepository.UpdateAsync(id, billing);
+            if (updated == null)
+                return NotFound($"Billing with ID {id} not found.");
+
+            return Ok(updated);
         }
 
-        return NoContent();
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteBilling(int id)
+        {
+            var deleted = await _billingRepository.DeleteAsync(id);
+            if (!deleted)
+                return NotFound($"Billing with ID {id} not found.");
+
+            return Ok(new { Message = "Billing deleted successfully" });
+        }
     }
 }

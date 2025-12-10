@@ -8,6 +8,7 @@
         public DateTime DateIssued { get; set; }
 
         public List<PrescriptionMedicineDTO> Medicines { get; set; } = new();
+        public int ConsultationId { get; internal set; }
     }
 
     public class PrescriptionMedicineDTO

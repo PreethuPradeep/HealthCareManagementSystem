@@ -28,20 +28,23 @@ public class PatientsController : ControllerBase
         var patient = await _patientRepository.GetByIdAsync(id);
 
         if (patient == null)
-        {
             return NotFound($"Patient with ID {id} not found.");
-        }
 
         return Ok(patient);
+    }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string? mmr, [FromQuery] string? name, [FromQuery] string? phone)
+    {
+        var patients = await _patientRepository.SearchAsync(mmr, name, phone);
+        return Ok(patients);
     }
 
     [HttpPost]
     public async Task<ActionResult<Patient>> CreatePatient(Patient patient)
     {
         if (!ModelState.IsValid)
-        {
             return BadRequest(ModelState);
-        }
 
         var createdPatient = await _patientRepository.AddAsync(patient);
         return CreatedAtAction(nameof(GetPatient), new { id = createdPatient.PatientId }, createdPatient);
@@ -51,22 +54,16 @@ public class PatientsController : ControllerBase
     public async Task<IActionResult> UpdatePatient(int id, Patient patient)
     {
         if (id != patient.PatientId)
-        {
             return BadRequest("Patient ID mismatch.");
-        }
 
         if (!ModelState.IsValid)
-        {
             return BadRequest(ModelState);
-        }
 
         var updated = await _patientRepository.UpdateAsync(id, patient);
         if (updated == null)
-        {
             return NotFound($"Patient with ID {id} not found.");
-        }
 
-        return NoContent();
+        return Ok(updated);
     }
 
     [HttpDelete("{id}")]
@@ -74,10 +71,8 @@ public class PatientsController : ControllerBase
     {
         var deleted = await _patientRepository.DeleteAsync(id);
         if (!deleted)
-        {
             return NotFound($"Patient with ID {id} not found.");
-        }
 
-        return NoContent();
+        return Ok(new { Message = "Patient deleted" });
     }
 }

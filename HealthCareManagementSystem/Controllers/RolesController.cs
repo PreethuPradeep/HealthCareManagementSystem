@@ -12,13 +12,11 @@ namespace HealthCareManagementSystem.Controllers
     {
         private readonly IRoleRepository _roleRepository;
 
-        // Dependency Injection
         public RolesController(IRoleRepository roleRepository)
         {
             _roleRepository = roleRepository;
         }
 
-        // GET: api/roles
         [HttpGet]
         public async Task<IActionResult> GetActiveRoles()
         {
@@ -31,7 +29,6 @@ namespace HealthCareManagementSystem.Controllers
             }));
         }
 
-        // GET: api/roles/5
         [HttpGet("{id}")]
         public async Task<IActionResult> GetRole(int id)
         {
@@ -40,19 +37,23 @@ namespace HealthCareManagementSystem.Controllers
             if (role == null)
                 return NotFound(new { Message = $"Role with ID {id} not found" });
 
-            return Ok(role);
+            return Ok(new
+            {
+                role.RoleId,
+                role.RoleName,
+                role.IsActive
+            });
         }
 
-        // POST: api/roles
         [HttpPost]
-        [Authorize]
-        public async Task<IActionResult> CreateRole(Role role)
+        public async Task<IActionResult> CreateRole(Role created)
         {
-            await _roleRepository.AddRoleAsync(role);
+            created.IsActive = true;
+
+            await _roleRepository.AddRoleAsync(created);
             return Ok(new { Message = "Role added successfully" });
         }
 
-        // PUT: api/roles/5
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateRole(int id, Role role)
         {
@@ -67,7 +68,6 @@ namespace HealthCareManagementSystem.Controllers
             return NotFound(new { Message = $"Role with ID {id} not found" });
         }
 
-        // DELETE: api/roles/5 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteRole(int id)
         {
@@ -80,4 +80,3 @@ namespace HealthCareManagementSystem.Controllers
         }
     }
 }
-

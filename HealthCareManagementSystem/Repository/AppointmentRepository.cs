@@ -91,6 +91,19 @@ namespace HealthCareManagementSystem.Repository
             await _context.SaveChangesAsync();
             return true;
         }
+        public async Task<IEnumerable<Appointment>> GetPendingByDoctorAndDateAsync(int doctorId, DateTime date)
+        {
+            return await _context.Appointments
+                .AsNoTracking()
+                .Include(a => a.Patient)
+                .Where(a =>
+                    a.DoctorId == doctorId &&
+                    a.AppointmentDate.Date == date.Date &&
+                    a.IsVisited == false)
+                .OrderBy(a => a.TokenNo)
+                .ToListAsync();
+        }
+
     }
 }
 

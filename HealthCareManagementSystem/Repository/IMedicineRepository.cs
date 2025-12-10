@@ -1,4 +1,6 @@
-﻿using HealthCareManagementSystem.Models;
+﻿using HealthCare.Models.DTOs;
+using HealthCareManagementSystem.Models;
+using HealthCareManagementSystem.Models.Pharm;
 
 namespace HealthCareManagementSystem.Repository
 {
@@ -13,5 +15,11 @@ namespace HealthCareManagementSystem.Repository
         // Stock operations
         Task<bool> CheckStockAsync(int medicineId, int requiredQty);
         Task<bool> ReduceStockAsync(int medicineId, int quantity);
+
+        Task<IEnumerable<MedicineListDTO>> GetListAsync();
+
+        Task<MedicineDetailsDTO?> GetDetailsAsync(int id);
+
+        Task<IEnumerable<MedicineListDTO>> SearchAsync(string query);
     }
 }

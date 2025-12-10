@@ -50,16 +50,16 @@ namespace HealthCareManagementSystem.Controllers
 
         // POST: api/specializations
         [HttpPost]
-        [Authorize]
         public async Task<IActionResult> CreateSpecialization(Specialization specialization)
         {
+            specialization.IsActive = true;
+
             await _specializationRepository.AddSpecializationAsync(specialization);
             return Ok(new { Message = "Specialization added successfully" });
         }
 
         // PUT: api/specializations/5
         [HttpPut("{id}")]
-        [Authorize]
         public async Task<IActionResult> UpdateSpecialization(int id, Specialization specialization)
         {
             if (id != specialization.SpecializationId)
@@ -73,9 +73,8 @@ namespace HealthCareManagementSystem.Controllers
             return NotFound(new { Message = $"Specialization with ID {id} not found" });
         }
 
-        // DELETE: api/specializations/5 (Soft Delete)
+        // DELETE: api/specializations/5
         [HttpDelete("{id}")]
-        [Authorize]
         public async Task<IActionResult> DeleteSpecialization(int id)
         {
             var result = await _specializationRepository.DeactivateSpecializationAsync(id);

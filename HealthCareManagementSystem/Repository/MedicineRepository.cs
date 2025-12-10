@@ -1,5 +1,7 @@
 ﻿using HealthCare.Database;
+using HealthCare.Models.DTOs;
 using HealthCareManagementSystem.Models;
+using HealthCareManagementSystem.Models.Pharm;
 using Microsoft.EntityFrameworkCore;
 
 namespace HealthCareManagementSystem.Repository
@@ -78,5 +80,59 @@ namespace HealthCareManagementSystem.Repository
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<IEnumerable<MedicineListDTO>> GetListAsync()
+        {
+            return await _context.Medicines
+                .Select(m => new MedicineListDTO
+                {
+                    MedicineId = m.MedicineId,
+                    Name = m.Name,
+                    BatchNo = m.BatchNo,
+                    Manufacturer = m.Manufacturer,
+                    Stock = m.Stock,
+                    UnitPrice = m.UnitPrice
+                })
+                .ToListAsync();
+        }
+
+        public async Task<MedicineDetailsDTO?> GetDetailsAsync(int id)
+        {
+            return await _context.Medicines
+                .Where(m => m.MedicineId == id)
+                .Select(m => new MedicineDetailsDTO
+                {
+                    MedicineId = m.MedicineId,
+                    Name = m.Name,
+                    BatchNo = m.BatchNo,
+                    Manufacturer = m.Manufacturer,
+                    ExpiryDate = m.ExpiryDate,
+                    UnitPrice = m.UnitPrice,
+                    Stock = m.Stock
+                })
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<IEnumerable<MedicineListDTO>> SearchAsync(string query)
+        {
+            query = query.ToLower();
+
+            return await _context.Medicines
+                .Where(m =>
+                    m.Name.ToLower().Contains(query) ||
+                    (m.Manufacturer ?? "").ToLower().Contains(query) ||
+                    (m.BatchNo ?? "").ToLower().Contains(query))
+                .Select(m => new MedicineListDTO
+                {
+                    MedicineId = m.MedicineId,
+                    Name = m.Name,
+                    BatchNo = m.BatchNo,
+                    Manufacturer = m.Manufacturer,
+                    Stock = m.Stock,
+                    UnitPrice = m.UnitPrice
+                })
+                .ToListAsync();
+        }
+
     }
 }

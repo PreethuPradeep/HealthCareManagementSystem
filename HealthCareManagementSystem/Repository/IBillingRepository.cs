@@ -12,4 +12,3 @@ namespace HealthCareManagementSystem.Repository
         Task<bool> DeleteAsync(int id);
     }
 }
-

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using HealthCareManagementSystem.Models.Pharm;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace HealthCareManagementSystem.Models
 {
@@ -10,5 +11,9 @@ namespace HealthCareManagementSystem.Models
         [ForeignKey("ConsultationId")]
         public Consultation? Consultation { get; set; }
         public ICollection<PrescriptionItem> PrescriptionItems { get; set; } = new List<PrescriptionItem>();
+        public DateTime DateIssued { get; set; } = DateTime.UtcNow;
+
+
+
     }
 }

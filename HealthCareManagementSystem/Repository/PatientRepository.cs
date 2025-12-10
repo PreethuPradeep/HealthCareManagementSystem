@@ -70,6 +70,24 @@ namespace HealthCareManagementSystem.Repository
             await _context.SaveChangesAsync();
             return true;
         }
+        public async Task<IEnumerable<Patient>> SearchAsync(string? mmr, string? name, string? phone)
+        {
+            var query = _context.Patients.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(mmr))
+                query = query.Where(p => p.MMRNumber.Contains(mmr));
+
+            if (!string.IsNullOrWhiteSpace(name))
+                query = query.Where(p => p.FullName.Contains(name));
+
+            if (!string.IsNullOrWhiteSpace(phone))
+                query = query.Where(p => p.Phone.Contains(phone));
+
+            return await query
+                .OrderBy(p => p.FullName)
+                .ToListAsync();
+        }
+
     }
 }
 

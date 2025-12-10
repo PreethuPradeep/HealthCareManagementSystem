@@ -11,6 +11,7 @@ namespace HealthCareManagementSystem.Repository
         Task<Appointment> AddAsync(Appointment appointment);
         Task<Appointment?> UpdateAsync(int id, Appointment appointment);
         Task<bool> DeleteAsync(int id);
+        Task<IEnumerable<Appointment>> GetPendingByDoctorAndDateAsync(int doctorId, DateTime date);
     }
 }
 

@@ -1,6 +1,7 @@
 ﻿using HealthCare.Database;
 using HealthCare.Models.DTOs;
 using HealthCareManagementSystem.Models;
+using HealthCareManagementSystem.Models.Pharm;
 using Microsoft.EntityFrameworkCore;
 
 namespace HealthCareManagementSystem.Repository
@@ -14,138 +15,58 @@ namespace HealthCareManagementSystem.Repository
             _context = context;
         }
 
-        public async Task<IEnumerable<PatientHistoryDTO>> GetPatientHistoryAsync(int patientId)
-        {
-            return await _context.Consultations
-                .Where(c => c.PatientId == patientId)
-                .Include(c => c.Doctor)
-                .ThenInclude(d => d.User)
-                .OrderByDescending(c => c.DateBooked)
-                .Select(c => new PatientHistoryDTO
-                {
-                    ConsultationId = c.ConsultationId,
-                    VisitDate = c.DateBooked,
-                    Diagnosis = c.Diagnosis,
-                    ChiefComplaint = c.ChiefComplaint,
-                    DoctorName = c.Doctor.User.FullName 
-                })
-                .ToListAsync();
-        }
-
-        public async Task<Consultation> AddConsultationAsync(ConsultationRequestDTO request)
-        {
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
-            {
-                var consultation = new Consultation
-                {
-                    PatientId = request.PatientId,
-                    DoctorId = request.DoctorId,
-                    AppointmentId = request.AppointmentId,
-                    ChiefComplaint = request.ChiefComplaint,
-                    Symptoms = request.Symptoms,
-                    Diagnosis = request.Diagnosis,
-                    DoctorNotes = request.DoctorNotes,
-                    FollowUpDate = request.FollowUpDate,
-                    DateBooked = DateTime.UtcNow
-                };
-
-                _context.Consultations.Add(consultation);
-                await _context.SaveChangesAsync();
-
-                if (request.Medicines.Any())
-                {
-                    var prescription = new Prescription
-                    {
-                        ConsultationId = consultation.ConsultationId,
-                        MedicineName = "General"
-                    };
-                    _context.Prescriptions.Add(prescription);
-                    await _context.SaveChangesAsync();
-
-                    foreach (var med in request.Medicines)
-                    {
-                        var item = new PrescriptionItem
-                        {
-                            PrescriptionId = prescription.PrescriptionId,
-                            MedicineId = med.MedicineId,
-                            Quantity = med.Quantity,
-                            Dosage = med.Dosage,
-                            DurationInDays = med.DurationInDays,
-                            MorningDose = med.MorningDose,
-                            NoonDose = med.NoonDose,
-                            EveningDose = med.EveningDose,
-                            MealTime = med.MealTime
-                        };
-                        _context.PrescriptionItems.Add(item);
-                    }
-                }
-
-                if (request.LabTests.Any())
-                {
-                    foreach (var test in request.LabTests)
-                    {
-                        var labRequest = new LabTestRequest
-                        {
-                            PatientId = request.PatientId,
-                            DoctorId = request.DoctorId,
-                            TestName = test.TestName,
-                            RequestedAt = DateTime.UtcNow
-                        };
-                        _context.LabTestRequests.Add(labRequest);
-                    }
-                }
-
-                var appointment = await _context.Appointments.FindAsync(request.AppointmentId);
-                if (appointment != null)
-                {
-                    appointment.IsVisited = true;
-                    _context.Appointments.Update(appointment);
-                }
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                return consultation;
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
-        }
-
         public async Task<Consultation?> GetByIdAsync(int id)
         {
             return await _context.Consultations.FindAsync(id);
         }
 
-        public async Task<bool> UpdateConsultationAsync(int id, ConsultationRequestDTO request)
+        public async Task<Consultation?> GetByIdWithDetailsAsync(int id)
         {
-            var consultation = await _context.Consultations.FindAsync(id);
-            if (consultation == null) return false;
+            return await _context.Consultations
+                .Include(c => c.Patient)
+                .Include(c => c.Doctor)
+                    .ThenInclude(d => d.User)
+                .Include(c => c.Prescriptions)
+                    .ThenInclude(p => p.PrescriptionItems)
+                        .ThenInclude(i => i.Medicine)
+                .Include(c => c.LabTests)
+                .FirstOrDefaultAsync(c => c.ConsultationId == id);
+        }
 
-            // 1. Update Basic Fields
-            consultation.Symptoms = request.Symptoms;
-            consultation.Diagnosis = request.Diagnosis;
-            consultation.DoctorNotes = request.DoctorNotes;
-            consultation.FollowUpDate = request.FollowUpDate;
+        public async Task<Consultation> AddConsultationAsync(ConsultationRequestDTO request)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
 
-            // 2. Handle Medicines (Clear old, Add new)
-            // Find the prescription linked to this consultation
-            var prescription = await _context.Prescriptions
-                .Include(p => p.PrescriptionItems)
-                .FirstOrDefaultAsync(p => p.ConsultationId == id);
-
-            if (prescription != null)
+            var consultation = new Consultation
             {
-                // Remove old items
-                _context.PrescriptionItems.RemoveRange(prescription.PrescriptionItems);
+                PatientId = request.PatientId,
+                DoctorId = request.DoctorId,
+                AppointmentId = request.AppointmentId,
+                ChiefComplaint = request.ChiefComplaint,
+                Symptoms = request.Symptoms,
+                Diagnosis = request.Diagnosis,
+                DoctorNotes = request.DoctorNotes,
+                FollowUpDate = request.FollowUpDate,
+                DateBooked = DateTime.UtcNow
+            };
 
-                // Add new items from request
+            _context.Consultations.Add(consultation);
+            await _context.SaveChangesAsync();
+
+            // Create Prescription
+            if (request.Medicines.Any())
+            {
+                var prescription = new Prescription
+                {
+                    ConsultationId = consultation.ConsultationId,
+                    MedicineName = "Prescription"
+                };
+                _context.Prescriptions.Add(prescription);
+                await _context.SaveChangesAsync();
+
                 foreach (var med in request.Medicines)
                 {
-                    var item = new PrescriptionItem
+                    _context.PrescriptionItems.Add(new PrescriptionItem
                     {
                         PrescriptionId = prescription.PrescriptionId,
                         MedicineId = med.MedicineId,
@@ -156,42 +77,164 @@ namespace HealthCareManagementSystem.Repository
                         NoonDose = med.NoonDose,
                         EveningDose = med.EveningDose,
                         MealTime = med.MealTime
-                    };
-                    _context.PrescriptionItems.Add(item);
+                    });
                 }
             }
 
-            // 3. Handle Lab Tests (Clear old, Add new)
-            // Be careful not to delete tests that might have results already (if you have results logic). 
-            // For now, we assume simple replace logic.
-            var oldLabs = await _context.LabTestRequests
-                .Where(l => l.PatientId == request.PatientId && l.DoctorId == request.DoctorId && l.RequestedAt.Date == consultation.DateBooked.Date)
-                .ToListAsync();
-
-            _context.LabTestRequests.RemoveRange(oldLabs);
-
+            // Create Lab Tests
             foreach (var test in request.LabTests)
             {
-                var labRequest = new LabTestRequest
+                _context.LabTestRequests.Add(new LabTestRequest
                 {
+                    ConsultationId = consultation.ConsultationId,
                     PatientId = request.PatientId,
                     DoctorId = request.DoctorId,
                     TestName = test.TestName,
                     RequestedAt = DateTime.UtcNow
-                };
-                _context.LabTestRequests.Add(labRequest);
+                });
             }
 
-            _context.Consultations.Update(consultation);
+            // Mark appointment visited
+            var appointment = await _context.Appointments.FindAsync(request.AppointmentId);
+            if (appointment != null)
+            {
+                appointment.IsVisited = true;
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return consultation;
+        }
+
+        public async Task<IEnumerable<PatientHistoryDTO>> GetPatientHistoryAsync(int patientId)
+        {
+            return await _context.Consultations
+                .Where(c => c.PatientId == patientId)
+                .Include(c => c.Doctor)
+                    .ThenInclude(d => d.User)
+                .OrderByDescending(c => c.DateBooked)
+                .Select(c => new PatientHistoryDTO
+                {
+                    ConsultationId = c.ConsultationId,
+                    VisitDate = c.DateBooked,
+                    Diagnosis = c.Diagnosis,
+                    ChiefComplaint = c.ChiefComplaint,
+                    DoctorName = c.Doctor.User.FullName
+                })
+                .ToListAsync();
+        }
+        public async Task<bool> UpdateConsultationAsync(int id, ConsultationRequestDTO request)
+        {
+            var consultation = await _context.Consultations
+                .Include(c => c.Prescriptions)
+                    .ThenInclude(p => p.PrescriptionItems)
+                .Include(c => c.LabTests)
+                .FirstOrDefaultAsync(c => c.ConsultationId == id);
+
+            if (consultation == null)
+                return false;
+
+            // Update basic SOAP fields
+            consultation.ChiefComplaint = request.ChiefComplaint;
+            consultation.Symptoms = request.Symptoms;
+            consultation.Diagnosis = request.Diagnosis;
+            consultation.DoctorNotes = request.DoctorNotes;
+            consultation.FollowUpDate = request.FollowUpDate;
+
+            // -------------------------
+            // 1) Update Prescription
+            // -------------------------
+
+            var prescription = consultation.Prescriptions?.FirstOrDefault();
+
+            if (prescription == null && request.Medicines.Any())
+            {
+                // Create new if missing
+                prescription = new Prescription
+                {
+                    ConsultationId = consultation.ConsultationId,
+                    MedicineName = "Prescription"
+                };
+                _context.Prescriptions.Add(prescription);
+                await _context.SaveChangesAsync();
+            }
+
+            if (prescription != null)
+            {
+                // Remove old items
+                _context.PrescriptionItems.RemoveRange(prescription.PrescriptionItems);
+
+                // Add new items
+                foreach (var med in request.Medicines)
+                {
+                    _context.PrescriptionItems.Add(new PrescriptionItem
+                    {
+                        PrescriptionId = prescription.PrescriptionId,
+                        MedicineId = med.MedicineId,
+                        Quantity = med.Quantity,
+                        Dosage = med.Dosage,
+                        DurationInDays = med.DurationInDays,
+                        MorningDose = med.MorningDose,
+                        NoonDose = med.NoonDose,
+                        EveningDose = med.EveningDose,
+                        MealTime = med.MealTime
+                    });
+                }
+            }
+
+            // -------------------------
+            // 2) Update Lab Tests
+            // -------------------------
+
+            // Remove existing linked lab tests
+            if (consultation.LabTests != null && consultation.LabTests.Any())
+                _context.LabTestRequests.RemoveRange(consultation.LabTests);
+
+            // Add the new lab tests
+            foreach (var test in request.LabTests)
+            {
+                _context.LabTestRequests.Add(new LabTestRequest
+                {
+                    ConsultationId = consultation.ConsultationId,
+                    PatientId = request.PatientId,
+                    DoctorId = request.DoctorId,
+                    TestName = test.TestName,
+                    RequestedAt = DateTime.UtcNow
+                });
+            }
+
             await _context.SaveChangesAsync();
             return true;
         }
-
         public async Task<bool> DeleteConsultationAsync(int id)
         {
-            var consultation = await _context.Consultations.FindAsync(id);
-            if (consultation == null) return false;
+            var consultation = await _context.Consultations
+                .Include(c => c.Prescriptions)
+                    .ThenInclude(p => p.PrescriptionItems)
+                .Include(c => c.LabTests)
+                .FirstOrDefaultAsync(c => c.ConsultationId == id);
 
+            if (consultation == null)
+                return false;
+
+            // Remove prescription items first
+            if (consultation.Prescriptions != null)
+            {
+                foreach (var pres in consultation.Prescriptions)
+                {
+                    if (pres.PrescriptionItems.Any())
+                        _context.PrescriptionItems.RemoveRange(pres.PrescriptionItems);
+                }
+
+                _context.Prescriptions.RemoveRange(consultation.Prescriptions);
+            }
+
+            // Remove lab tests
+            if (consultation.LabTests != null && consultation.LabTests.Any())
+                _context.LabTestRequests.RemoveRange(consultation.LabTests);
+
+            // Reset appointment visit status
             var appointment = await _context.Appointments.FindAsync(consultation.AppointmentId);
             if (appointment != null)
             {
@@ -202,5 +245,6 @@ namespace HealthCareManagementSystem.Repository
             await _context.SaveChangesAsync();
             return true;
         }
+
     }
 }

@@ -1,4 +1,5 @@
 ﻿using HealthCareManagementSystem.Models;
+using HealthCareManagementSystem.Models.Pharm;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +23,7 @@ namespace HealthCare.Database
         //  PHARMACIST MODULE MODELS
         public DbSet<Medicine> Medicines { get; set; }
         public DbSet<PrescriptionItem> PrescriptionItems { get; set; }
-        public DbSet<MedicinePrescriptionDetails> MedicinePrescriptionDetails { get; set; }
+
         public DbSet<PharmacyBill> PharmacyBills { get; set; }
         public DbSet<PharmacyBillItem> PharmacyBillItems { get; set; }
         public DbSet<StockTransaction> StockTransactions { get; set; }
@@ -68,7 +69,19 @@ namespace HealthCare.Database
                 .HasMany(m => m.StockTransactions)
                 .WithOne(st => st.Medicine)
                 .HasForeignKey(st => st.MedicineId);
-            
+            //doctor consultation
+            modelBuilder.Entity<Consultation>()
+                .HasMany(c => c.Prescriptions)
+                .WithOne(p => p.Consultation)
+                .HasForeignKey(p => p.ConsultationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Consultation>()
+                .HasMany(c => c.LabTests)
+                .WithOne(l => l.Consultation)
+                .HasForeignKey(l => l.ConsultationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
         }
     }
 }

@@ -69,6 +69,10 @@ namespace HealthCareManagementSystem.Models
         [ForeignKey("AppointmentId")]
         [JsonIgnore]
         public virtual Appointment? Appointment { get; set; }
+        public string? CreatedByUserId { get; set; }
+        [ForeignKey("CreatedByUserId")]
+        public ApplicationUser? CreatedByUser { get; set; }
+
     }
 }
 

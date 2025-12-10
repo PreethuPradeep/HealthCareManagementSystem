@@ -42,7 +42,7 @@ namespace HealthCareManagementSystem.Controllers
 
         // POST: api/users
         [HttpPost]
-        [Authorize]
+
         public async Task<IActionResult> CreateUser(ApplicationUser user)
         {
             await _userRepository.AddStaffAsync(user);

@@ -1,4 +1,7 @@
-﻿using HealthCare.Services;
+﻿using HealthCare.Models.DTOs;
+using HealthCare.Services;
+using HealthCareManagementSystem.Models;
+using HealthCareManagementSystem.Models.Pharm;
 using HealthCareManagementSystem.Repository;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,12 +14,13 @@ namespace HealthCareManagementSystem.Controllers
         private readonly IPrescriptionRepository _repo;
         private readonly PdfService _pdfService;
 
-        public PrescriptionsController(IPrescriptionRepository repo,PdfService _pdfService)
+        public PrescriptionsController(IPrescriptionRepository repo, PdfService pdfService)
         {
             _repo = repo;
-            _pdfService = _pdfService;
+            _pdfService = pdfService;
         }
 
+        // 1. Search prescriptions (by patient or doctor)
         [HttpGet("search")]
         public async Task<IActionResult> Search([FromQuery] string keyword)
         {
@@ -27,42 +31,55 @@ namespace HealthCareManagementSystem.Controllers
             return Ok(result);
         }
 
-
+        // 2. Get full prescription details (DTO)
         [HttpGet("{prescriptionId}")]
         public async Task<IActionResult> GetPrescription(int prescriptionId)
         {
-            var prescription = await _repo.GetPrescriptionAsync(prescriptionId);
-            if (prescription == null)
+            var details = await _repo.GetPrescriptionDetailsAsync(prescriptionId);
+
+            if (details == null)
                 return NotFound("Prescription not found");
 
-            return Ok(prescription);
+            return Ok(details);
         }
 
-
-        [HttpGet("{prescriptionId}/items")]
-        public async Task<IActionResult> GetPrescriptionItems(int prescriptionId)
-        {
-            var items = await _repo.GetPrescriptionItemsAsync(prescriptionId);
-            return Ok(items);
-        }
-
-        [HttpGet("{prescriptionId}/dosage")]
-        public async Task<IActionResult> GetDosageDetails(int prescriptionId)
-        {
-            var dosage = await _repo.GetDosageDetailsAsync(prescriptionId);
-            return Ok(dosage);
-        }
-
+        // 3. Download PDF
         [HttpGet("{prescriptionId}/download")]
         public async Task<IActionResult> DownloadPrescription(int prescriptionId)
         {
-            var prescription = await _repo.GetPrescriptionAsync(prescriptionId);
-            if (prescription == null) return NotFound("Prescription not found");
+            var details = await _repo.GetPrescriptionDetailsAsync(prescriptionId);
 
-            var items = await _repo.GetPrescriptionItemsAsync(prescriptionId);
+            if (details == null)
+                return NotFound("Prescription not found");
 
-            // You need to inject PdfService into this controller constructor first!
-            var pdfBytes = _pdfService.GeneratePrescriptionPdf(prescription, items);
+            // Convert DTO → Entity-like structure for PDF
+            var prescriptionEntity = new Prescription
+            {
+                PrescriptionId = details.PrescriptionId,
+                ConsultationId = details.ConsultationId
+            };
+
+            var items = details.Medicines.Select(m => new PrescriptionItem
+            {
+                MedicineId = m.MedicineId,
+                MorningDose = m.MorningDose,
+                NoonDose = m.NoonDose,
+                EveningDose = m.EveningDose,
+                MealTime = m.MealTime,
+                DurationInDays = m.DurationInDays,
+                Dosage = m.Dosage,
+                Quantity = m.Quantity,
+
+                Medicine = new Medicine
+                {
+                    Name = m.MedicineName
+                }
+            }).ToList();
+
+            var pdfBytes = _pdfService.GeneratePrescriptionPdf(
+                prescriptionEntity,
+                items
+            );
 
             return File(pdfBytes, "application/pdf", $"Prescription_{prescriptionId}.pdf");
         }

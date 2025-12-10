@@ -1,5 +1,4 @@
 using HealthCareManagementSystem.Models;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -16,22 +15,34 @@ namespace HealthCareManagementSystem.Helper
             _configuration = configuration;
         }
 
-        public string GenerateToken(ApplicationUser user)
+        public string GenerateToken(ApplicationUser user, int specificId)
         {
             var jwtSettings = _configuration.GetSection("Jwt");
-            var key = Encoding.UTF8.GetBytes(jwtSettings["Key"] ?? "YourSecretKeyForJWTTokenGeneration12345");
+
+            var keyString = jwtSettings["Key"];
+            if (string.IsNullOrWhiteSpace(keyString))
+                throw new Exception("JWT Key missing in appsettings.json");
+
+            var key = Encoding.UTF8.GetBytes(keyString);
 
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim("UserId", user.Id),
                 new Claim(ClaimTypes.Name, user.FullName ?? user.UserName ?? ""),
-                new Claim(ClaimTypes.Email, user.Email ?? ""),
+                new Claim(ClaimTypes.Email, user.Email ?? "")
             };
 
             if (user.Role != null)
             {
                 claims.Add(new Claim(ClaimTypes.Role, user.Role.RoleName));
+
+                if (user.RoleId.HasValue)
+                    claims.Add(new Claim("RoleId", user.RoleId.Value.ToString()));
             }
+
+
+            claims.Add(new Claim("SpecificId", specificId.ToString()));
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
@@ -50,4 +61,3 @@ namespace HealthCareManagementSystem.Helper
         }
     }
 }
-

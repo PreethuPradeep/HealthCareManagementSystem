@@ -29,5 +29,11 @@ namespace HealthCareManagementSystem.Models
 
         [ForeignKey("DoctorId")]
         public Doctor? Doctor { get; set; }
+        public ICollection<Prescription>? Prescriptions { get; set; }
+        public ICollection<LabTestRequest>? LabTests { get; set; }
+
+        [ForeignKey("AppointmentId")]
+        public Appointment? Appointment { get; set; }
+
     }
 }

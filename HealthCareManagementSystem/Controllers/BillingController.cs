@@ -1,76 +1,78 @@
 ﻿using HealthCare.Database;
-using HealthCareManagementSystem.Models;
+using HealthCare.Models.DTOs;
 using HealthCare.Services;
+using HealthCareManagementSystem.Models.Pharm;
 using HealthCareManagementSystem.Repository;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HealthCareManagementSystem.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class BillingController : ControllerBase
+    [Authorize(Roles = "Pharmacist,Admin")]
+    public class PharmacyBillingController : ControllerBase
     {
-        private readonly IBillingPharmacyRepository _billingPharmacyRepo;
+        private readonly IBillingPharmacyRepository _billingRepo;
         private readonly IMedicineRepository _medicineRepo;
         private readonly PdfService _pdfService;
-        private readonly HealthCareDbContext _context;
 
-        //   CONSTRUCTOR (With PdfService + DbContext)
-        public BillingController(
-            IBillingPharmacyRepository billingPharmacyRepo,
+        public PharmacyBillingController(
+            IBillingPharmacyRepository billingRepo,
             IMedicineRepository medicineRepo,
-            PdfService pdfService,
-            HealthCareDbContext context)
+            PdfService pdfService)
         {
-            _billingPharmacyRepo = billingPharmacyRepo;
+            _billingRepo = billingRepo;
             _medicineRepo = medicineRepo;
             _pdfService = pdfService;
-            _context = context;
         }
 
-        //  CREATE PHARMACY BILL
         [HttpPost("create")]
-        public async Task<IActionResult> CreateBill([FromBody] List<PharmacyBillItem> items)
+        public async Task<IActionResult> CreateBill([FromBody] CreatePharmacyBillDTO dto)
         {
-            if (items == null || items.Count == 0)
-                return BadRequest("Bill items cannot be empty");
+            if (dto.Items.Count == 0)
+                return BadRequest("Bill must contain at least one item.");
 
-            //  STOCK VALIDATION
-            foreach (var item in items)
+            var billItems = new List<PharmacyBillItem>();
+
+            foreach (var i in dto.Items)
             {
-                var hasStock = await _medicineRepo.CheckStockAsync(item.MedicineId, item.Quantity);
-                if (!hasStock)
-                {
-                    return BadRequest($"Insufficient stock for MedicineId: {item.MedicineId}");
-                }
+                var med = await _medicineRepo.GetByIdAsync(i.MedicineId);
+                if (med == null)
+                    return BadRequest($"Invalid MedicineId: {i.MedicineId}");
 
-                //  AUTO LINE TOTAL
-                item.LineTotal = item.Quantity * item.UnitPrice;
+                // Check stock
+                var hasStock = await _medicineRepo.CheckStockAsync(i.MedicineId, i.Quantity);
+                if (!hasStock)
+                    return BadRequest($"Insufficient stock for MedicineId {i.MedicineId}");
+
+                var item = new PharmacyBillItem
+                {
+                    MedicineId = i.MedicineId,
+                    Quantity = i.Quantity,
+                    UnitPrice = med.SellingPrice,
+                    LineTotal = med.SellingPrice * i.Quantity
+                };
+
+                billItems.Add(item);
             }
 
-            var bill = new PharmacyBill
-            {
-                BillDate = DateTime.Now
-            };
+            var bill = new PharmacyBill();
+            var saved = await _billingRepo.CreateBillAsync(bill, billItems);
 
-            var savedBill = await _billingPharmacyRepo.CreateBillAsync(bill, items);
-            return Ok(savedBill);
+            return Ok(saved);
         }
 
-        //  DOWNLOAD BILL AS PDF
         [HttpGet("download/{billId}")]
-        public IActionResult DownloadBill(int billId)
+        public async Task<IActionResult> DownloadBill(int billId)
         {
-            var bill = _context.PharmacyBills
-                .Where(b => b.PharmacyBillId == billId)
-                .FirstOrDefault();
-
+            var bill = await _billingRepo.GetBillByIdAsync(billId);
             if (bill == null)
-                return NotFound("Bill not found");
+                return NotFound("Bill not found.");
 
-            var pdf = _pdfService.GenerateBillPdf(bill);
+            var pdfBytes = _pdfService.GenerateBillPdf(bill);
 
-            return File(pdf, "application/pdf", $"Bill_{billId}.pdf");
+            return File(pdfBytes, "application/pdf", $"PharmacyBill_{billId}.pdf");
         }
     }
 }

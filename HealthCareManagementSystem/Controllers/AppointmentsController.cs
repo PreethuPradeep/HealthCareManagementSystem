@@ -16,15 +16,15 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Appointment>>> GetAppointments()
+    public async Task<IActionResult> GetAppointments()
     {
         var appointments = await _appointmentRepository.GetAllAsync();
         return Ok(appointments);
     }
+
     [HttpGet("doctor/{doctorId}")]
-    public async Task<ActionResult<IEnumerable<Appointment>>> GetAppointmentsByDoctor(int doctorId, [FromQuery] DateTime? date)
+    public async Task<IActionResult> GetAppointmentsByDoctor(int doctorId, [FromQuery] DateTime? date)
     {
-        // Default to today if no date is provided
         var targetDate = date ?? DateTime.Today;
 
         var appointments = await _appointmentRepository.GetByDoctorAndDateAsync(doctorId, targetDate);
@@ -32,69 +32,72 @@ public class AppointmentsController : ControllerBase
         return Ok(appointments);
     }
 
+    [HttpGet("doctor/{doctorId}/pending")]
+    public async Task<IActionResult> GetPendingAppointments(int doctorId, [FromQuery] DateTime? date)
+    {
+        var targetDate = date ?? DateTime.Today;
+
+        var appointments = await _appointmentRepository.GetPendingByDoctorAndDateAsync(doctorId, targetDate);
+
+        return Ok(appointments);
+    }
+
     [HttpGet("{id}")]
-    public async Task<ActionResult<Appointment>> GetAppointment(int id)
+    public async Task<IActionResult> GetAppointment(int id)
     {
         var appointment = await _appointmentRepository.GetByIdAsync(id);
 
         if (appointment == null)
-        {
             return NotFound($"Appointment with ID {id} not found.");
-        }
 
         return Ok(appointment);
     }
 
     [HttpGet("patient/{patientId}")]
-    public async Task<ActionResult<IEnumerable<Appointment>>> GetAppointmentsByPatient(int patientId)
+    public async Task<IActionResult> GetAppointmentsByPatient(int patientId)
     {
         var appointments = await _appointmentRepository.GetByPatientAsync(patientId);
         return Ok(appointments);
     }
 
     [HttpPost]
-    public async Task<ActionResult<Appointment>> CreateAppointment(Appointment appointment)
+    public async Task<IActionResult> CreateAppointment(Appointment appointment)
     {
         if (!ModelState.IsValid)
-        {
             return BadRequest(ModelState);
-        }
 
-        var createdAppointment = await _appointmentRepository.AddAsync(appointment);
-        return CreatedAtAction(nameof(GetAppointment), new { id = createdAppointment.AppointmentId }, createdAppointment);
+        var created = await _appointmentRepository.AddAsync(appointment);
+
+        return CreatedAtAction(nameof(GetAppointment),
+            new { id = created.AppointmentId },
+            created);
     }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateAppointment(int id, Appointment appointment)
     {
         if (id != appointment.AppointmentId)
-        {
             return BadRequest("Appointment ID mismatch.");
-        }
 
         if (!ModelState.IsValid)
-        {
             return BadRequest(ModelState);
-        }
 
         var updated = await _appointmentRepository.UpdateAsync(id, appointment);
-        if (updated == null)
-        {
-            return NotFound($"Appointment with ID {id} not found.");
-        }
 
-        return NoContent();
+        if (updated == null)
+            return NotFound($"Appointment with ID {id} not found.");
+
+        return Ok(updated);
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteAppointment(int id)
     {
         var deleted = await _appointmentRepository.DeleteAsync(id);
-        if (!deleted)
-        {
-            return NotFound($"Appointment with ID {id} not found.");
-        }
 
-        return NoContent();
+        if (!deleted)
+            return NotFound($"Appointment with ID {id} not found.");
+
+        return Ok(new { Message = "Appointment deleted" });
     }
 }
