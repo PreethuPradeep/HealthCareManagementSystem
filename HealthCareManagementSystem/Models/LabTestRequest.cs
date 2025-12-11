@@ -13,6 +13,8 @@ namespace HealthCareManagementSystem.Models
 
         public int PatientId { get; set; }
 
+        public int DoctorId { get; set; }
+
         [Required]
         public string TestName { get; set; } = string.Empty;
 
@@ -24,5 +26,6 @@ namespace HealthCareManagementSystem.Models
         public DateTime RequestedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? CompletedAt { get; set; }
+        public Consultation Consultation { get; set; }
     }
 }

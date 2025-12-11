@@ -69,6 +69,25 @@ namespace HealthCare.Database
                 .HasMany(m => m.StockTransactions)
                 .WithOne(st => st.Medicine)
                 .HasForeignKey(st => st.MedicineId);
+            // Configure Consultation foreign keys to avoid cascade path conflicts
+            modelBuilder.Entity<Consultation>()
+                .HasOne(c => c.Patient)
+                .WithMany()
+                .HasForeignKey(c => c.PatientId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Consultation>()
+                .HasOne(c => c.Doctor)
+                .WithMany(d => d.Consultations)
+                .HasForeignKey(c => c.DoctorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Consultation>()
+                .HasOne(c => c.Appointment)
+                .WithMany()
+                .HasForeignKey(c => c.AppointmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             //doctor consultation
             modelBuilder.Entity<Consultation>()
                 .HasMany(c => c.Prescriptions)
@@ -81,6 +100,11 @@ namespace HealthCare.Database
                 .WithOne(l => l.Consultation)
                 .HasForeignKey(l => l.ConsultationId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure decimal precision for Doctor.Fee
+            modelBuilder.Entity<Doctor>()
+                .Property(d => d.Fee)
+                .HasPrecision(18, 2);
 
         }
     }

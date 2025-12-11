@@ -67,5 +67,15 @@ namespace HealthCareManagementSystem.Repository
 
             return user;
         }
+
+        public Task<IEnumerable<ApplicationUser>> GetDoctorsBySpecializationAsync(int specializationId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<ApplicationUser>> GetByRoleAsync(string roleName)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -30,7 +30,7 @@ namespace HealthCare.Services
         // NEW: Generate Prescription PDF
         public byte[] GeneratePrescriptionPdf(Prescription prescription, IEnumerable<PrescriptionItem> items)
         {
-            return Document.Create(container =>
+            return QuestPDF.Fluent.Document.Create(container =>
             {
                 container.Page(page =>
                 {
