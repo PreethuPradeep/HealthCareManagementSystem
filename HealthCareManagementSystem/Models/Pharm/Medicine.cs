@@ -33,7 +33,6 @@ namespace HealthCareManagementSystem.Models.Pharm
         // Navigation properties
         public ICollection<PharmacyBillItem> BillItems { get; set; } = new List<PharmacyBillItem>();
         public ICollection<StockTransaction> StockTransactions { get; set; } = new List<StockTransaction>();
-        public int StockQuantity { get; internal set; }
     }
 
 

@@ -31,10 +31,10 @@ namespace HealthCareManagementSystem.Repository
 
                     // Deduct stock
                     var med = await _context.Medicines.FindAsync(item.MedicineId);
-                    if (med == null || med.StockQuantity < item.Quantity)
+                    if (med == null || med.Stock < item.Quantity)
                         throw new Exception("Invalid stock condition detected during billing.");
 
-                    med.StockQuantity -= item.Quantity;
+                    med.Stock -= item.Quantity;
 
                     _context.PharmacyBillItems.Add(item);
                 }
