@@ -10,6 +10,7 @@ namespace HealthCareManagementSystem.Repository
         Task<IEnumerable<PatientHistoryDetailDTO>> GetPatientHistoryWithDetailsAsync(int patientId);
         Task<Consultation?> GetByIdAsync(int id);
         Task<Consultation?> GetByIdWithDetailsAsync(int id);
+        Task<Consultation?> GetByAppointmentIdAsync(int appointmentId);
 
         Task<bool> UpdateConsultationAsync(int id, ConsultationRequestDTO request);
         Task<bool> DeleteConsultationAsync(int id);

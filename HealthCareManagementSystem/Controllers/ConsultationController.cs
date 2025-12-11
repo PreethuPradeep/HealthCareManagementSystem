@@ -83,9 +83,24 @@ namespace HealthCareManagementSystem.Controllers
             return Ok(new { Message = "Consultation updated successfully" });
         }
 
+        // GET: Get Consultation by Appointment ID
+        [HttpGet("appointment/{appointmentId}")]
+        [Authorize(Roles = "Admin,Doctor")]
+        public async Task<IActionResult> GetByAppointment(int appointmentId)
+        {
+            if (appointmentId <= 0)
+                return BadRequest("Invalid appointment ID");
+
+            var consultation = await _consultationRepo.GetByAppointmentIdAsync(appointmentId);
+            if (consultation == null)
+                return NotFound("No consultation found for this appointment");
+
+            return Ok(consultation);
+        }
+
         // DELETE: Delete Consultation
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Doctor")]
         public async Task<IActionResult> DeleteConsultation(int id)
         {
             if (id <= 0)

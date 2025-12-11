@@ -33,6 +33,19 @@ namespace HealthCareManagementSystem.Repository
                 .FirstOrDefaultAsync(c => c.ConsultationId == id);
         }
 
+        public async Task<Consultation?> GetByAppointmentIdAsync(int appointmentId)
+        {
+            return await _context.Consultations
+                .Include(c => c.Patient)
+                .Include(c => c.Doctor)
+                    .ThenInclude(d => d.User)
+                .Include(c => c.Prescriptions)
+                    .ThenInclude(p => p.PrescriptionItems)
+                        .ThenInclude(i => i.Medicine)
+                .Include(c => c.LabTests)
+                .FirstOrDefaultAsync(c => c.AppointmentId == appointmentId);
+        }
+
         public async Task<Consultation> AddConsultationAsync(ConsultationRequestDTO request)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
