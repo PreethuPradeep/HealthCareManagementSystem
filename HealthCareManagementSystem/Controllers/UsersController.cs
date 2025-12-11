@@ -42,11 +42,17 @@ namespace HealthCareManagementSystem.Controllers
 
         // POST: api/users
         [HttpPost]
-
-        public async Task<IActionResult> CreateUser(ApplicationUser user)
+        public async Task<IActionResult> CreateUser(CreateStaffDto dto)
         {
-            await _userRepository.AddStaffAsync(user);
-            return Ok(new { Message = "User added successfully" });
+            try
+            {
+                await _userRepository.AddStaffAsync(dto);
+                return Ok(new { Message = "User added successfully" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
         }
 
         // PUT: api/users/{id}

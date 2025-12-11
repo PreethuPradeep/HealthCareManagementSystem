@@ -1,12 +1,16 @@
 
 using HealthCare.Database;
 using HealthCare.Services;
+using HealthCareManagementSystem.Helper;
 using HealthCareManagementSystem.Models;
 using HealthCareManagementSystem.Repository;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -31,16 +35,14 @@ namespace HealthCareManagementSystem
                 options.JsonSerializerOptions.WriteIndented = true;
             });
 
-            builder.Services.AddCors(options =>
+            builder.Services.AddCors(options => //adding cors policy
             {
-                options.AddPolicy("AllowAngularApp",
-                    policy =>
-                    {
-                        policy.WithOrigins("http://localhost:4200")
-                              .AllowAnyHeader()
-                              .AllowAnyMethod()
-                              .AllowCredentials();
-                    });
+                options.AddPolicy("MyPolicy", policy =>
+                {
+                    policy.WithOrigins("http://localhost:4200")
+                    .AllowAnyHeader()
+                    .AllowAnyMethod();
+                });
             });
             //admin
             var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -80,6 +82,21 @@ namespace HealthCareManagementSystem
                 .AddEntityFrameworkStores<HealthCareDbContext>()
                 .AddDefaultTokenProviders();
 
+            builder.Services.ConfigureApplicationCookie(options =>
+            {
+                // Do not redirect for APIs—return 401/403 instead
+                options.Events.OnRedirectToLogin = ctx =>
+                {
+                    ctx.Response.StatusCode = 401;
+                    return Task.CompletedTask;
+                };
+                options.Events.OnRedirectToAccessDenied = ctx =>
+                {
+                    ctx.Response.StatusCode = 403;
+                    return Task.CompletedTask;
+                };
+            });
+
             // Configure Identity options
             builder.Services.Configure<IdentityOptions>(options =>
             {
@@ -109,7 +126,7 @@ namespace HealthCareManagementSystem
             //doctor
             builder.Services.AddScoped<IConsultationRepository, ConsultationRepository>();
 
-            builder.Services.AddScoped<HealthCareManagementSystem.Helper.JwtTokenHelper>();
+            builder.Services.AddScoped<JwtTokenHelper>();
             builder.Services.AddScoped<PdfService>();
             builder.Services.AddAuthorization();
 
@@ -121,12 +138,15 @@ namespace HealthCareManagementSystem
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-            app.UseCors("AllowAngularApp");
+            app.UseCors("MyPolicy");
             app.UseHttpsRedirection();
             app.UseAuthentication();
             app.UseAuthorization();
-
-
+            
+            // Map Identity API endpoints (login, register, etc.)
+            //app.MapIdentityApi<ApplicationUser>();
+            
+            // Map custom controllers
             app.MapControllers();
             SeedExistingUsers(app).GetAwaiter().GetResult();
             app.Run();
