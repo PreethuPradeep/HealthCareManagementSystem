@@ -3,12 +3,14 @@ using HealthCare.Services;
 using HealthCareManagementSystem.Models;
 using HealthCareManagementSystem.Models.Pharm;
 using HealthCareManagementSystem.Repository;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HealthCareManagementSystem.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize] // Require authentication for all prescription endpoints
     public class PrescriptionsController : ControllerBase
     {
         private readonly IPrescriptionRepository _repo;
@@ -22,6 +24,7 @@ namespace HealthCareManagementSystem.Controllers
 
         // 1. Search prescriptions (by patient or doctor)
         [HttpGet("search")]
+        [Authorize(Roles = "Admin,Pharmacist,Doctor")] // Only authorized roles can search prescriptions
         public async Task<IActionResult> Search([FromQuery] string keyword)
         {
             if (string.IsNullOrWhiteSpace(keyword))
@@ -33,6 +36,7 @@ namespace HealthCareManagementSystem.Controllers
 
         // 2. Get full prescription details (DTO)
         [HttpGet("{prescriptionId}")]
+        [Authorize(Roles = "Admin,Pharmacist,Doctor")] // Only authorized roles can view prescription details
         public async Task<IActionResult> GetPrescription(int prescriptionId)
         {
             var details = await _repo.GetPrescriptionDetailsAsync(prescriptionId);
@@ -45,6 +49,7 @@ namespace HealthCareManagementSystem.Controllers
 
         // 3. Download PDF
         [HttpGet("{prescriptionId}/download")]
+        [Authorize(Roles = "Admin,Pharmacist,Doctor")] // Only authorized roles can download prescriptions
         public async Task<IActionResult> DownloadPrescription(int prescriptionId)
         {
             var details = await _repo.GetPrescriptionDetailsAsync(prescriptionId);

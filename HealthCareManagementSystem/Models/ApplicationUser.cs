@@ -10,10 +10,10 @@ namespace HealthCareManagementSystem.Models
         [StringLength(150)]
         [RegularExpression(@"^[A-Za-z]+(?: [A-Za-z]+)*$",
             ErrorMessage = "Name must contain only letters and a single space between words.")]
-        public string FullName { get; set; } = string.Empty;
+        public string FullName { get; set; }
 
         [Required]
-        public string Gender { get; set; } = string.Empty;
+        public string Gender { get; set; }
 
         [Required]
         [DataType(DataType.Date)]
@@ -22,7 +22,7 @@ namespace HealthCareManagementSystem.Models
         [Required]
         [StringLength(15)]
         [RegularExpression(@"^\d{10}$", ErrorMessage = "Enter 10 digit mobile number")]
-        public string MobileNumber { get; set; } = string.Empty;
+        public string MobileNumber { get; set; }
 
         public string? Address { get; set; }
 

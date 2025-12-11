@@ -20,6 +20,7 @@ namespace HealthCareManagementSystem.Controllers
 
         // GET: api/LabTests/patient/5
         [HttpGet("patient/{patientId}")]
+        [Authorize(Roles = "Admin,Doctor,Lab")] // Restrict lab test access to authorized roles
         public async Task<IActionResult> GetByPatient(int patientId)
         {
             var tests = await _context.LabTestRequests

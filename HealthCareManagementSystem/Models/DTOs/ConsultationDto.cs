@@ -46,4 +46,24 @@
         public string? DoctorName { get; set; }
         public string? ChiefComplaint { get; set; }
     }
+
+    public class PatientHistoryDetailDTO : PatientHistoryDTO
+    {
+        public string? Symptoms { get; set; }
+        public string? DoctorNotes { get; set; }
+        public List<PatientHistoryPrescriptionDTO> Medicines { get; set; } = new();
+        public List<string> LabTests { get; set; } = new();
+    }
+
+    public class PatientHistoryPrescriptionDTO
+    {
+        public int MedicineId { get; set; }
+        public string? MedicineName { get; set; }
+        public int? Quantity { get; set; }
+        public int DurationInDays { get; set; }
+        public int MorningDose { get; set; }
+        public int NoonDose { get; set; }
+        public int EveningDose { get; set; }
+        public string MealTime { get; set; } = "After Food";
+    }
 }

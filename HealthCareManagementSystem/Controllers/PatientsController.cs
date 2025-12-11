@@ -1,11 +1,13 @@
 using HealthCareManagementSystem.Models;
 using HealthCareManagementSystem.Repository;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HealthCareManagementSystem.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Admin,Receptionist")]
 public class PatientsController : ControllerBase
 {
     private readonly IPatientRepository _patientRepository;

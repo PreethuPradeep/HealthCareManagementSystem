@@ -124,6 +124,43 @@ namespace HealthCareManagementSystem.Repository
                 })
                 .ToListAsync();
         }
+        public async Task<IEnumerable<PatientHistoryDetailDTO>> GetPatientHistoryWithDetailsAsync(int patientId)
+        {
+            return await _context.Consultations
+                .Where(c => c.PatientId == patientId)
+                .Include(c => c.Doctor)
+                    .ThenInclude(d => d.User)
+                .Include(c => c.Prescriptions)
+                    .ThenInclude(p => p.PrescriptionItems)
+                        .ThenInclude(i => i.Medicine)
+                .Include(c => c.LabTests)
+                .OrderByDescending(c => c.DateBooked)
+                .Select(c => new PatientHistoryDetailDTO
+                {
+                    ConsultationId = c.ConsultationId,
+                    VisitDate = c.DateBooked,
+                    Diagnosis = c.Diagnosis,
+                    ChiefComplaint = c.ChiefComplaint,
+                    DoctorName = c.Doctor.User.FullName,
+                    Symptoms = c.Symptoms,
+                    DoctorNotes = c.DoctorNotes,
+                    Medicines = c.Prescriptions
+                        .SelectMany(p => p.PrescriptionItems)
+                        .Select(i => new PatientHistoryPrescriptionDTO
+                        {
+                            MedicineId = i.MedicineId,
+                            MedicineName = i.Medicine != null ? i.Medicine.Name : null,
+                            Quantity = i.Quantity,
+                            DurationInDays = i.DurationInDays,
+                            MorningDose = i.MorningDose,
+                            NoonDose = i.NoonDose,
+                            EveningDose = i.EveningDose,
+                            MealTime = i.MealTime
+                        }).ToList(),
+                    LabTests = c.LabTests.Select(t => t.TestName).ToList()
+                })
+                .ToListAsync();
+        }
         public async Task<bool> UpdateConsultationAsync(int id, ConsultationRequestDTO request)
         {
             var consultation = await _context.Consultations

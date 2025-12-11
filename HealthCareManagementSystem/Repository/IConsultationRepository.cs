@@ -7,6 +7,7 @@ namespace HealthCareManagementSystem.Repository
     {
         Task<Consultation> AddConsultationAsync(ConsultationRequestDTO request);
         Task<IEnumerable<PatientHistoryDTO>> GetPatientHistoryAsync(int patientId);
+        Task<IEnumerable<PatientHistoryDetailDTO>> GetPatientHistoryWithDetailsAsync(int patientId);
         Task<Consultation?> GetByIdAsync(int id);
         Task<Consultation?> GetByIdWithDetailsAsync(int id);
 

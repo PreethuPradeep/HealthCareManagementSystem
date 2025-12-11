@@ -30,6 +30,19 @@ namespace HealthCareManagementSystem.Repository
                 .OrderBy(a => a.TokenNo)
                 .ToListAsync();
         }
+        public async Task<IEnumerable<Appointment>> GetByDoctorAndRangeAsync(int doctorId, DateTime startDate, DateTime endDate)
+        {
+            return await _context.Appointments
+                .AsNoTracking()
+                .Include(a => a.Patient)
+                .Where(a =>
+                    a.DoctorId == doctorId &&
+                    a.AppointmentDate.Date >= startDate.Date &&
+                    a.AppointmentDate.Date <= endDate.Date)
+                .OrderBy(a => a.AppointmentDate)
+                .ThenBy(a => a.TokenNo)
+                .ToListAsync();
+        }
         public async Task<Appointment?> GetByIdAsync(int id)
         {
             return await _context.Appointments.FindAsync(id);
@@ -46,9 +59,11 @@ namespace HealthCareManagementSystem.Repository
 
         public async Task<Appointment> AddAsync(Appointment appointment)
         {
-            // Generate a token number for the appointment date
+            // Generate a token number per doctor per appointment date
             var currentMax = await _context.Appointments
-                .Where(a => a.AppointmentDate.Date == appointment.AppointmentDate.Date)
+                .Where(a =>
+                    a.DoctorId == appointment.DoctorId &&
+                    a.AppointmentDate.Date == appointment.AppointmentDate.Date)
                 .MaxAsync(a => (int?)a.TokenNo) ?? 0;
 
             appointment.TokenNo = currentMax + 1;

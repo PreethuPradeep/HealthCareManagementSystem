@@ -19,12 +19,25 @@ namespace HealthCareManagementSystem.Controllers
 
         // GET: Patient History
         [HttpGet("patient/{patientId}/history")]
+        [Authorize(Roles = "Admin,Doctor,Receptionist")] // Restrict patient history access to authorized roles
         public async Task<IActionResult> GetHistory(int patientId)
         {
             if (patientId <= 0)
                 return BadRequest("Invalid patient ID");
 
             var history = await _consultationRepo.GetPatientHistoryAsync(patientId);
+            return Ok(history);
+        }
+
+        // GET: Patient History with prescriptions and lab tests (for doctor view)
+        [HttpGet("patient/{patientId}/history/details")]
+        [Authorize(Roles = "Doctor,Admin")]
+        public async Task<IActionResult> GetDetailedHistory(int patientId)
+        {
+            if (patientId <= 0)
+                return BadRequest("Invalid patient ID");
+
+            var history = await _consultationRepo.GetPatientHistoryWithDetailsAsync(patientId);
             return Ok(history);
         }
 

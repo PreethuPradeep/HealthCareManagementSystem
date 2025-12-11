@@ -28,10 +28,28 @@ namespace HealthCareManagementSystem.Repository
 
         public async Task<int> AddStaffAsync(CreateStaffDto model)
         {
+            // Ensure a password exists (UI currently does not send one) and it meets basic policy (digit + length)
+            if (string.IsNullOrWhiteSpace(model.Password))
+            {
+                model.Password = "Welcome123"; // temporary bootstrap password; should be reset on first login
+            }
+            // If password lacks a digit, append one to satisfy policy
+            if (!model.Password.Any(char.IsDigit))
+            {
+                model.Password += "1";
+            }
+            // Ensure minimum length of 6
+            if (model.Password.Length < 6)
+            {
+                model.Password = model.Password.PadRight(6, '1');
+            }
+
             var identityUser = new ApplicationUser
             {
                 UserName = model.UserName,
                 Email = model.Email,
+                NormalizedUserName = model.UserName?.ToUpperInvariant(),
+                NormalizedEmail = model.Email?.ToUpperInvariant(),
                 FullName = model.FullName,
                 Gender = model.Gender,
                 DateOfJoin = model.DateOfJoin,
@@ -77,6 +95,8 @@ namespace HealthCareManagementSystem.Repository
             existingUser.Address = user.Address;
             existingUser.Email = user.Email;
             existingUser.UserName = user.UserName;
+            existingUser.NormalizedEmail = user.Email?.ToUpperInvariant();
+            existingUser.NormalizedUserName = user.UserName?.ToUpperInvariant();
             existingUser.RoleId = user.RoleId;
             existingUser.SpecializationId = user.SpecializationId;
             existingUser.ConsultationFee = user.ConsultationFee;
@@ -85,6 +105,14 @@ namespace HealthCareManagementSystem.Repository
 
             // EF will automatically track changes and update the entity
             return await _context.SaveChangesAsync();
+        }
+
+        public async Task<ApplicationUser?> GetByIdAsync(string id)
+        {
+            return await _context.Users
+                .Include(u => u.Role)
+                .Include(u => u.Specialization)
+                .FirstOrDefaultAsync(u => u.Id == id);
         }
 
         public async Task<int> DeactivateStaffAsync(string userId)

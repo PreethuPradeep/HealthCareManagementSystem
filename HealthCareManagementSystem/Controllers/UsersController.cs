@@ -30,14 +30,47 @@ namespace HealthCareManagementSystem.Controllers
                 u.FullName,
                 u.UserName,
                 u.Email,
+                u.Gender,
+                u.DateOfBirth,
+                u.DateOfJoin,
+                u.Address,
                 u.MobileNumber,
                 Role = u.Role != null ? u.Role.RoleName : "No Role",
+                u.RoleId,
                 // Include specialization and consultation fee for doctors
                 Specialization = u.Specialization != null ? u.Specialization.SpecializationName : null,
                 u.SpecializationId,
                 u.ConsultationFee,
                 u.IsActive
             }));
+        }
+
+        // GET: api/users/{id}
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetUserById(string id)
+        {
+            var user = await _userRepository.GetByIdAsync(id);
+            if (user == null)
+                return NotFound(new { Message = $"User with ID {id} not found" });
+
+            return Ok(new
+            {
+                user.Id,
+                user.FullName,
+                user.UserName,
+                user.Email,
+                user.MobileNumber,
+                user.Gender,
+                user.DateOfBirth,
+                user.DateOfJoin,
+                user.Address,
+                user.RoleId,
+                Role = user.Role?.RoleName,
+                user.SpecializationId,
+                Specialization = user.Specialization?.SpecializationName,
+                user.ConsultationFee,
+                user.IsActive
+            });
         }
 
         // POST: api/users
