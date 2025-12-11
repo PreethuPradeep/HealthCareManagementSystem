@@ -18,7 +18,7 @@ namespace HealthCareManagementSystem.Models
 
         [Required(ErrorMessage = "Amount is required")]
         [Column(TypeName = "decimal(18,2)")]
-        [Range(0.01, 9999999.99, ErrorMessage = "Amount must be between 0.01 and 9999999.99")]
+        [Range(0, 9999999.99, ErrorMessage = "Amount must be between 0 and 9999999.99")]
         public decimal Amount { get; set; }
 
         [StringLength(200)]

@@ -25,6 +25,7 @@ namespace HealthCareManagementSystem.Models
         public ICollection<Consultation>? Consultations { get; set; }
         public ICollection<LabTestRequest>? LabTestsOrdered { get; set; }
         public ICollection<Prescription>? Prescriptions { get; set; }
+        public ICollection<DoctorSchedule>? Schedules { get; set; }
     }
 
     // Pharmacy Models

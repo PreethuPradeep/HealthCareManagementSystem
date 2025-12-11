@@ -17,6 +17,7 @@ namespace HealthCare.Database
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<Consultation> Consultations { get; set; }
         public DbSet<Doctor> Doctors { get; set; }
+        public DbSet<DoctorSchedule> DoctorSchedules { get; set; }
         public DbSet<Patient> Patients { get; set; }
         public DbSet<Prescription> Prescriptions { get; set; }
 
@@ -105,6 +106,13 @@ namespace HealthCare.Database
             modelBuilder.Entity<Doctor>()
                 .Property(d => d.Fee)
                 .HasPrecision(18, 2);
+
+            // DoctorSchedule relationship
+            modelBuilder.Entity<DoctorSchedule>()
+                .HasOne(ds => ds.Doctor)
+                .WithMany(d => d.Schedules)
+                .HasForeignKey(ds => ds.DoctorId)
+                .OnDelete(DeleteBehavior.Cascade);
 
         }
     }

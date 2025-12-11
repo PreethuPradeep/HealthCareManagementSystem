@@ -172,6 +172,7 @@ namespace HealthCareManagementSystem
             builder.Services.AddScoped<IBillingPharmacyRepository, BillingPharmacyRepository>();
             //doctor
             builder.Services.AddScoped<IConsultationRepository, ConsultationRepository>();
+            builder.Services.AddScoped<IDoctorScheduleRepository, DoctorScheduleRepository>();
 
             builder.Services.AddScoped<JwtTokenHelper>();
             builder.Services.AddScoped<PdfService>();

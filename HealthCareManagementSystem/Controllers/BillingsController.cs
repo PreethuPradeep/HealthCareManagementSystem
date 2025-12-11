@@ -41,6 +41,16 @@ namespace HealthCareManagementSystem.Controllers
             return Ok(billings);
         }
 
+        [HttpGet("appointment/{appointmentId}")]
+        public async Task<IActionResult> GetBillingByAppointment(int appointmentId)
+        {
+            var billing = await _billingRepository.GetByAppointmentIdAsync(appointmentId);
+            if (billing == null)
+                return NotFound($"Billing for appointment ID {appointmentId} not found.");
+
+            return Ok(billing);
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreateBilling(Billing billing)
         {

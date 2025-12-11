@@ -14,12 +14,36 @@ namespace HealthCareManagementSystem.Repository
             _context = context;
         }
 
-        public async Task<IEnumerable<Patient>> GetAllAsync()
+        public async Task<PagedResult<Patient>> GetAllAsync(int pageNumber = 1, int pageSize = 10, PatientSortBy sortBy = PatientSortBy.MRN)
         {
-            return await _context.Patients
+            var query = _context.Patients
+                .Include(p => p.Appointments)
                 .AsNoTracking()
-                .OrderBy(p => p.PatientId)
+                .AsQueryable();
+
+            // Apply sorting
+            query = sortBy switch
+            {
+                PatientSortBy.MRN => query.OrderBy(p => p.MMRNumber),
+                PatientSortBy.Name => query.OrderBy(p => p.FullName),
+                PatientSortBy.LastAppointment => query.OrderByDescending(p => 
+                    p.Appointments.Any() ? p.Appointments.Max(a => a.AppointmentDate) : DateTime.MinValue),
+                _ => query.OrderBy(p => p.MMRNumber)
+            };
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
+
+            return new PagedResult<Patient>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
         }
 
         public async Task<Patient?> GetByIdAsync(int id)
@@ -151,22 +175,46 @@ namespace HealthCareManagementSystem.Repository
             await _context.SaveChangesAsync();
             return true;
         }
-        public async Task<IEnumerable<Patient>> SearchAsync(string? mmr, string? name, string? phone)
+        public async Task<PagedResult<Patient>> SearchAsync(string? searchTerm, int pageNumber = 1, int pageSize = 10, PatientSortBy sortBy = PatientSortBy.MRN)
         {
-            var query = _context.Patients.AsQueryable();
+            var query = _context.Patients
+                .Include(p => p.Appointments)
+                .AsNoTracking()
+                .AsQueryable();
 
-            if (!string.IsNullOrWhiteSpace(mmr))
-                query = query.Where(p => p.MMRNumber.Contains(mmr));
+            // Unified search - search across MRN, name, and phone
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var searchLower = searchTerm.ToLower();
+                query = query.Where(p => 
+                    p.MMRNumber.ToLower().Contains(searchLower) ||
+                    p.FullName.ToLower().Contains(searchLower) ||
+                    p.Phone.Contains(searchTerm));
+            }
 
-            if (!string.IsNullOrWhiteSpace(name))
-                query = query.Where(p => p.FullName.Contains(name));
+            // Apply sorting
+            query = sortBy switch
+            {
+                PatientSortBy.MRN => query.OrderBy(p => p.MMRNumber),
+                PatientSortBy.Name => query.OrderBy(p => p.FullName),
+                PatientSortBy.LastAppointment => query.OrderByDescending(p => 
+                    p.Appointments.Any() ? p.Appointments.Max(a => a.AppointmentDate) : DateTime.MinValue),
+                _ => query.OrderBy(p => p.MMRNumber)
+            };
 
-            if (!string.IsNullOrWhiteSpace(phone))
-                query = query.Where(p => p.Phone.Contains(phone));
-
-            return await query
-                .OrderBy(p => p.FullName)
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
+
+            return new PagedResult<Patient>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
         }
 
     }

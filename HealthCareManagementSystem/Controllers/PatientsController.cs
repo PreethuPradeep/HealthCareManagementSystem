@@ -2,6 +2,7 @@ using HealthCareManagementSystem.Models;
 using HealthCareManagementSystem.Repository;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using static HealthCareManagementSystem.Repository.IPatientRepository;
 
 namespace HealthCareManagementSystem.Controllers;
 
@@ -18,10 +19,17 @@ public class PatientsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Patient>>> GetPatients()
+    public async Task<ActionResult<PagedResult<Patient>>> GetPatients(
+        [FromQuery] int pageNumber = 1, 
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string sortBy = "MRN")
     {
-        var patients = await _patientRepository.GetAllAsync();
-        return Ok(patients);
+        var sortByEnum = Enum.TryParse<PatientSortBy>(sortBy, true, out var parsed) 
+            ? parsed 
+            : PatientSortBy.MRN;
+        
+        var result = await _patientRepository.GetAllAsync(pageNumber, pageSize, sortByEnum);
+        return Ok(result);
     }
 
     [HttpGet("{id}")]
@@ -36,10 +44,18 @@ public class PatientsController : ControllerBase
     }
 
     [HttpGet("search")]
-    public async Task<IActionResult> Search([FromQuery] string? mmr, [FromQuery] string? name, [FromQuery] string? phone)
+    public async Task<IActionResult> Search(
+        [FromQuery] string? searchTerm,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string sortBy = "MRN")
     {
-        var patients = await _patientRepository.SearchAsync(mmr, name, phone);
-        return Ok(patients);
+        var sortByEnum = Enum.TryParse<PatientSortBy>(sortBy, true, out var parsed) 
+            ? parsed 
+            : PatientSortBy.MRN;
+        
+        var result = await _patientRepository.SearchAsync(searchTerm, pageNumber, pageSize, sortByEnum);
+        return Ok(result);
     }
 
     [HttpPost]

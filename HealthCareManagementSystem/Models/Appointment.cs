@@ -69,11 +69,17 @@ namespace HealthCareManagementSystem.Models
 
         public DateTime? UpdatedAt { get; set; }
 
-        [NotMapped]
-        public string Status => IsVisited ? "Visited" : "Pending";
+        [StringLength(50)]
+        public string Status { get; set; } = "Scheduled";
+
+        [StringLength(500)]
+        public string? Reason { get; set; }
 
         [ForeignKey("PatientId")]
         public virtual Patient? Patient { get; set; }
+
+        [ForeignKey("DoctorId")]
+        public virtual Doctor? Doctor { get; set; }
     }
 }
 
