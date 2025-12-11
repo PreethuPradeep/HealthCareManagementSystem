@@ -148,8 +148,81 @@ namespace HealthCareManagementSystem
             
             // Map custom controllers
             app.MapControllers();
+            SeedRolesAndAdmin(app).GetAwaiter().GetResult();
             SeedExistingUsers(app).GetAwaiter().GetResult();
             app.Run();
+        }
+        private static async Task SeedRolesAndAdmin(WebApplication app)
+        {
+            using var scope = app.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<HealthCareDbContext>();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+            var requiredRoles = new[]
+            {
+                "Admin",
+                "Doctor",
+                "Receptionist",
+                "Pharmacist",
+                "Lab"
+            };
+
+            // Ensure role records exist in custom Roles table
+            foreach (var roleName in requiredRoles)
+            {
+                if (!context.Roles.Any(r => r.RoleName == roleName))
+                {
+                    context.Roles.Add(new Role
+                    {
+                        RoleName = roleName,
+                        IsActive = true
+                    });
+                }
+            }
+
+            await context.SaveChangesAsync();
+
+            // Seed a default admin if none exists
+            var adminEmail = "admin@hospital.com";
+            var adminUser = await userManager.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Email == adminEmail);
+
+            var adminRole = await context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Admin");
+            if (adminRole == null)
+            {
+                return;
+            }
+
+            if (adminUser == null)
+            {
+                var newAdmin = new ApplicationUser
+                {
+                    UserName = adminEmail,
+                    Email = adminEmail,
+                    FullName = "System Administrator",
+                    Gender = "Other",
+                    DateOfJoin = DateTime.UtcNow.Date,
+                    DateOfBirth = new DateTime(1990, 1, 1),
+                    MobileNumber = "9999999999",
+                    Address = "System",
+                    RoleId = adminRole.RoleId,
+                    IsActive = true,
+                    EmailConfirmed = true
+                };
+
+                var createResult = await userManager.CreateAsync(newAdmin, "Admin@123");
+                if (!createResult.Succeeded)
+                {
+                    throw new Exception($"Failed to seed admin user: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
+                }
+            }
+            else if (adminUser.RoleId != adminRole.RoleId)
+            {
+                adminUser.RoleId = adminRole.RoleId;
+                context.Users.Update(adminUser);
+                await context.SaveChangesAsync();
+            }
         }
         private static async Task SeedExistingUsers(WebApplication app)
         {
