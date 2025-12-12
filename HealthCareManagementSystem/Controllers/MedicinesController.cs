@@ -9,7 +9,7 @@ namespace HealthCareManagementSystem.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin,Pharmacist")]
+    [Authorize(Roles = "Admin,Pharmacist,Doctor")]
     public class MedicinesController : ControllerBase
     {
         private readonly IMedicineRepository _repo;

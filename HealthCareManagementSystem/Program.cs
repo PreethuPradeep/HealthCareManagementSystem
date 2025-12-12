@@ -205,6 +205,7 @@ namespace HealthCareManagementSystem
             using var scope = app.Services.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<HealthCareDbContext>();
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
             var requiredRoles = new[]
             {
@@ -215,9 +216,10 @@ namespace HealthCareManagementSystem
                 "Lab"
             };
 
-            // Ensure role records exist in custom Roles table
+            // Ensure role records exist in custom Roles table AND Identity roles
             foreach (var roleName in requiredRoles)
             {
+                // Create in custom Roles table
                 if (!context.Roles.Any(r => r.RoleName == roleName))
                 {
                     context.Roles.Add(new Role
@@ -225,6 +227,12 @@ namespace HealthCareManagementSystem
                         RoleName = roleName,
                         IsActive = true
                     });
+                }
+
+                // Create Identity role if it doesn't exist
+                if (!await roleManager.RoleExistsAsync(roleName))
+                {
+                    await roleManager.CreateAsync(new IdentityRole(roleName));
                 }
             }
 
@@ -264,12 +272,28 @@ namespace HealthCareManagementSystem
                 {
                     throw new Exception($"Failed to seed admin user: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
                 }
+
+                // Add admin to Identity Admin role
+                if (!await userManager.IsInRoleAsync(newAdmin, "Admin"))
+                {
+                    await userManager.AddToRoleAsync(newAdmin, "Admin");
+                }
             }
-            else if (adminUser.RoleId != adminRole.RoleId)
+            else
             {
-                adminUser.RoleId = adminRole.RoleId;
-                context.Users.Update(adminUser);
-                await context.SaveChangesAsync();
+                // Sync admin user's Identity role
+                if (adminUser.RoleId != adminRole.RoleId)
+                {
+                    adminUser.RoleId = adminRole.RoleId;
+                    context.Users.Update(adminUser);
+                    await context.SaveChangesAsync();
+                }
+
+                // Ensure admin is in Identity Admin role
+                if (!await userManager.IsInRoleAsync(adminUser, "Admin"))
+                {
+                    await userManager.AddToRoleAsync(adminUser, "Admin");
+                }
             }
         }
         private static async Task SeedExistingUsers(WebApplication app)
@@ -277,6 +301,8 @@ namespace HealthCareManagementSystem
             using var scope = app.Services.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<HealthCareDbContext>();
             var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<ApplicationUser>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
             // Known intended passwords provided by user for existing seeded accounts.
             var resetPasswords = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -334,6 +360,36 @@ namespace HealthCareManagementSystem
             }
 
             await context.SaveChangesAsync();
+
+            // Sync all existing users' Identity roles
+            var allUsersWithRoles = await context.Users
+                .Include(u => u.Role)
+                .Where(u => u.RoleId.HasValue && u.Role != null)
+                .ToListAsync();
+
+            foreach (var user in allUsersWithRoles)
+            {
+                if (string.IsNullOrWhiteSpace(user.Role.RoleName))
+                    continue;
+
+                // Ensure Identity role exists
+                if (!await roleManager.RoleExistsAsync(user.Role.RoleName))
+                {
+                    await roleManager.CreateAsync(new IdentityRole(user.Role.RoleName));
+                }
+
+                // Add user to Identity role if not already in it
+                var isInRole = await userManager.IsInRoleAsync(user, user.Role.RoleName);
+                if (!isInRole)
+                {
+                    var addResult = await userManager.AddToRoleAsync(user, user.Role.RoleName);
+                    if (!addResult.Succeeded)
+                    {
+                        var errors = string.Join(", ", addResult.Errors.Select(e => e.Description));
+                        Console.WriteLine($"Warning: Failed to sync Identity role for user {user.Email}: {errors}");
+                    }
+                }
+            }
         }
     }
 }

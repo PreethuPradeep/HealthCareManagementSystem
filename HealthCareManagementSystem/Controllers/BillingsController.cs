@@ -7,7 +7,7 @@ namespace HealthCareManagementSystem.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin,Receptionist")]
+    [Authorize(Roles = "Admin,Receptionist,Doctor")]
     public class BillingsController : ControllerBase
     {
         private readonly IBillingRepository _billingRepository;

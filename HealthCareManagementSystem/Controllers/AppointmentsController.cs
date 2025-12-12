@@ -26,7 +26,7 @@ public class AppointmentsController : ControllerBase
     /// Get all appointments (Admin, Receptionist)
     /// </summary>
     [HttpGet]
-    [Authorize(Roles = "Admin,Receptionist")]
+    [Authorize(Roles = "Admin,Receptionist,Doctor")]
     public async Task<IActionResult> GetAllAppointments([FromQuery] DateTime? date)
     {
         try

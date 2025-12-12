@@ -10,11 +10,16 @@ namespace HealthCareManagementSystem.Repository
     {
         private readonly HealthCareDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
 
-        public UserSqlServerRepositoryImpl(HealthCareDbContext context, UserManager<ApplicationUser> userManager)
+        public UserSqlServerRepositoryImpl(
+            HealthCareDbContext context, 
+            UserManager<ApplicationUser> userManager,
+            RoleManager<IdentityRole> roleManager)
         {
             _context = context;
             _userManager = userManager;
+            _roleManager = roleManager;
         }
 
         public async Task<IEnumerable<ApplicationUser>> GetAllActiveStaffAsync()
@@ -72,6 +77,30 @@ namespace HealthCareManagementSystem.Repository
                 throw new InvalidOperationException($"User creation failed: {errors}");
             }
 
+            // Add user to Identity role if RoleId is provided
+            if (model.RoleId.HasValue)
+            {
+                var role = await _context.Roles.FirstOrDefaultAsync(r => r.RoleId == model.RoleId.Value);
+                if (role != null && !string.IsNullOrWhiteSpace(role.RoleName))
+                {
+                    // Ensure Identity role exists
+                    var identityRoleExists = await _roleManager.RoleExistsAsync(role.RoleName);
+                    if (!identityRoleExists)
+                    {
+                        await _roleManager.CreateAsync(new IdentityRole(role.RoleName));
+                    }
+                    
+                    // Add user to Identity role
+                    var addToRoleResult = await _userManager.AddToRoleAsync(identityUser, role.RoleName);
+                    if (!addToRoleResult.Succeeded)
+                    {
+                        // Log warning but don't fail user creation
+                        var roleErrors = string.Join(", ", addToRoleResult.Errors.Select(e => e.Description));
+                        Console.WriteLine($"Warning: Failed to add user to Identity role '{role.RoleName}': {roleErrors}");
+                    }
+                }
+            }
+
             return 1;
         }
 
@@ -97,11 +126,57 @@ namespace HealthCareManagementSystem.Repository
             existingUser.UserName = user.UserName;
             existingUser.NormalizedEmail = user.Email?.ToUpperInvariant();
             existingUser.NormalizedUserName = user.UserName?.ToUpperInvariant();
+            var oldRoleId = existingUser.RoleId;
             existingUser.RoleId = user.RoleId;
             existingUser.SpecializationId = user.SpecializationId;
             existingUser.ConsultationFee = user.ConsultationFee;
             existingUser.IsActive = user.IsActive;
             existingUser.DateOfBirth = user.DateOfBirth;
+
+            // Sync Identity roles if RoleId changed
+            if (oldRoleId != user.RoleId)
+            {
+                // Remove from old Identity role
+                if (oldRoleId.HasValue)
+                {
+                    var oldRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleId == oldRoleId.Value);
+                    if (oldRole != null && !string.IsNullOrWhiteSpace(oldRole.RoleName))
+                    {
+                        var isInOldRole = await _userManager.IsInRoleAsync(existingUser, oldRole.RoleName);
+                        if (isInOldRole)
+                        {
+                            await _userManager.RemoveFromRoleAsync(existingUser, oldRole.RoleName);
+                        }
+                    }
+                }
+
+                // Add to new Identity role
+                if (user.RoleId.HasValue)
+                {
+                    var newRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleId == user.RoleId.Value);
+                    if (newRole != null && !string.IsNullOrWhiteSpace(newRole.RoleName))
+                    {
+                        // Ensure Identity role exists
+                        var identityRoleExists = await _roleManager.RoleExistsAsync(newRole.RoleName);
+                        if (!identityRoleExists)
+                        {
+                            await _roleManager.CreateAsync(new IdentityRole(newRole.RoleName));
+                        }
+                        
+                        // Add user to Identity role
+                        var isInNewRole = await _userManager.IsInRoleAsync(existingUser, newRole.RoleName);
+                        if (!isInNewRole)
+                        {
+                            var addToRoleResult = await _userManager.AddToRoleAsync(existingUser, newRole.RoleName);
+                            if (!addToRoleResult.Succeeded)
+                            {
+                                var roleErrors = string.Join(", ", addToRoleResult.Errors.Select(e => e.Description));
+                                Console.WriteLine($"Warning: Failed to add user to Identity role '{newRole.RoleName}': {roleErrors}");
+                            }
+                        }
+                    }
+                }
+            }
 
             // EF will automatically track changes and update the entity
             return await _context.SaveChangesAsync();

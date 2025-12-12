@@ -8,7 +8,7 @@ namespace HealthCareManagementSystem.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin,Receptionist")]
+[Authorize(Roles = "Admin,Receptionist,Doctor")]
 public class PatientsController : ControllerBase
 {
     private readonly IPatientRepository _patientRepository;

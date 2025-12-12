@@ -10,7 +10,7 @@ namespace HealthCareManagementSystem.Models
         public DateTime DateOfBirth { get; set; }
         public string MobileNumber { get; set; }
         public string Address { get; set; }
-        public int RoleId { get; set; }
+        public int? RoleId { get; set; }
         public int? SpecializationId { get; set; }
         public decimal? ConsultationFee { get; set; }
         public bool IsActive { get; set; }
